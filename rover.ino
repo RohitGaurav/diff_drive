@@ -20,10 +20,10 @@ float angvel;
 
 DualMC33926MotorShield md;
 
-Encoder leftW(5,2);
+Encoder leftW(2,5);
 Encoder rightW(11,3);
 long leftold=0, rightold=-999;
-float d=0.12065,LcumError,RcumError,LlastError,RlastError,LrateError,RrateError;
+float d=0.065,LcumError,RcumError,LlastError,RlastError,LrateError,RrateError;
 float wLcumError,wRcumError,wLlastError,wRlastError,wLrateError,wRrateError,wRerror,wLerror;
 
 void speedset(const geometry_msgs::Twist& speedvalue)
@@ -35,14 +35,20 @@ void speedset(const geometry_msgs::Twist& speedvalue)
   LSetpoint=float( long( speedvalue.linear.x * 100)) / 100;
     RSetpoint=float( long( speedvalue.linear.x * 100)) / 100;
   wRsv=speedvalue.angular.z;
-  wRSetpoint=speedvalue.angular.z ;
+   wRSetpoint=speedvalue.angular.z*0.5;
     wLSetpoint=-wRSetpoint;
-  if(speedvalue.linear.x!=0 or speedvalue.angular.z!=0) 
-  { md.setM1Speed(533.4*Lpidout+(157.5*wLpidout));  //right
-  md.setM2Speed(533.4*Rpidout-(-157.5*wRpidout));
-  Linearpid();
-     wpid();
+  if(speedvalue.linear.x!=0 and speedvalue.angular.z==0) 
+  {   md.setM2Speed(-325*Rpidout);//Right
+     md.setM1Speed(320*Lpidout);//left; //left
+     Linearpid();
   }
+   else if(speedvalue.linear.x==0 and speedvalue.angular.z!=0)
+   {
+    
+    md.setM2Speed(-325*wRpidout);//Right
+     md.setM1Speed(320*wLpidout);
+     wpid();
+}
 else
 {
     md.setM2Speed(0);//Right
@@ -63,7 +69,7 @@ ros::Subscriber<geometry_msgs::Twist>sub("/cmd_vel",speedset);
 class encoder
 {
     private:
-    float d=0.12065,l=0.20;
+    float d=0.065,l=0.20;
    float r=d/2;
     public:
     float Lrev,Rrev,Lvel,Rvel,Ldist,Rdist,x,y,theta,dth;
@@ -195,7 +201,6 @@ void loop()
 
      e.odom();
      Linearpid();
-     wpid();
          lp.publish(&lvelmsg);
     rp.publish(&rvelmsg); 
   nh.spinOnce();
