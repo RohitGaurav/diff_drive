@@ -10,7 +10,7 @@
 #include<std_msgs/Float64.h>
 
 double   wRSetpoint,wLSetpoint,LSetpoint,RSetpoint, LOutput, ROutput,Lerror,Rerror,Lsv,Rsv,wLsv,wRsv;
-double Lpidin,Lpidout=0,Rpidin,Rpidout=0,Rthresh=0,Lthresh=0;
+double Lpidin,Lpidout,Rpidin,Rpidout,Rthresh,Lthresh;
 double wLpidin,wLpidout=0,wRpidin,wRpidout=0,wRthresh=0,wLthresh=0;
 float angvel;
  float timeout=0;
@@ -20,10 +20,10 @@ float angvel;
 
 DualMC33926MotorShield md;
 
-Encoder leftW(2,5);
-Encoder rightW(11,3);
+Encoder leftW(5,2);
+Encoder rightW(3,11);
 long leftold=0, rightold=-999;
-float d=0.065,LcumError,RcumError,LlastError,RlastError,LrateError,RrateError;
+float d=0.12065,LcumError,RcumError,LlastError,RlastError,LrateError,RrateError;
 float wLcumError,wRcumError,wLlastError,wRlastError,wLrateError,wRrateError,wRerror,wLerror;
 
 void speedset(const geometry_msgs::Twist& speedvalue)
@@ -35,20 +35,14 @@ void speedset(const geometry_msgs::Twist& speedvalue)
   LSetpoint=float( long( speedvalue.linear.x * 100)) / 100;
     RSetpoint=float( long( speedvalue.linear.x * 100)) / 100;
   wRsv=speedvalue.angular.z;
-   wRSetpoint=speedvalue.angular.z*0.5;
+  wRSetpoint=speedvalue.angular.z ;
     wLSetpoint=-wRSetpoint;
-  if(speedvalue.linear.x!=0 and speedvalue.angular.z==0) 
-  {   md.setM2Speed(-325*Rpidout);//Right
-     md.setM1Speed(320*Lpidout);//left; //left
-     Linearpid();
-  }
-   else if(speedvalue.linear.x==0 and speedvalue.angular.z!=0)
-   {
-    
-    md.setM2Speed(-325*wRpidout);//Right
-     md.setM1Speed(320*wLpidout);
+  if(speedvalue.linear.x!=0 or speedvalue.angular.z!=0) 
+  { md.setM1Speed(550*Lpidout+(157.5*wLpidout));  //right
+  md.setM2Speed(550*Rpidout-(-157.5*wRpidout));
+  Linearpid();
      wpid();
-}
+  }
 else
 {
     md.setM2Speed(0);//Right
@@ -69,7 +63,7 @@ ros::Subscriber<geometry_msgs::Twist>sub("/cmd_vel",speedset);
 class encoder
 {
     private:
-    float d=0.065,l=0.20;
+    float d=0.12065,l=0.20;
    float r=d/2;
     public:
     float Lrev,Rrev,Lvel,Rvel,Ldist,Rdist,x,y,theta,dth;
@@ -115,8 +109,8 @@ void encoder:: count()
 void encoder::odom()
 {
      
-      Lrev=float(leftold*100)/902;
-      Rrev=float(rightold*100)/902;
+      Lrev=float(leftold*10)/1700;
+      Rrev=float(rightold*10)/1700;
       Ldist=Lrev*PI*d; 
       Rdist=Rrev*PI*d;  
       Lvel=(Ldist);
@@ -133,7 +127,8 @@ void encoder::odom()
       //dt=dt+1;
     lvelmsg.data=Lvel;
 rvelmsg.data=Rvel;
-      
+//Serial.println(Lvel);
+Serial.println(Rvel);      
 }
   
 
@@ -157,7 +152,7 @@ e.count();
  cerrorR=(cerrorR)+Rerror*0.01;
   Rpidout=RSetpoint+(0.03*Rerror+0.04*cerrorR);
   Lpidout=LSetpoint+(0.03*Lerror+0.04*cerrorL);
-  //Serial.println(Lpidout);
+ // Serial.println(Lpidout);
    LlastError =Lerror;
     RlastError=Rerror;
     
@@ -200,11 +195,13 @@ void loop()
 {
 
      e.odom();
-     Linearpid();
+    
          lp.publish(&lvelmsg);
     rp.publish(&rvelmsg); 
   nh.spinOnce();
 
-  delay(10);
+   Linearpid();
+     wpid();
+  delay(100);
   
 }
