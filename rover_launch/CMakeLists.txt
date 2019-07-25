@@ -202,4 +202,4 @@ ${catkin_INCLUDE_DIRS}
 
 add_executable(odom src/odom.cpp)
 target_link_libraries(odom ${catkin_LIBRARIES})
-add_dependencies(odom rover_launch_generate_messages_cpp)
+#add_dependencies(odom rover_launch_generate_messages_cpp)
